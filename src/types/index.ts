@@ -44,7 +44,9 @@ export interface SurveillanceLayerItem {
   temperature?: number;
   humidity?: number;
   condition?: string;
+  disease?: string;
 }
+
 
 export interface SurveillanceLayersData {
   timestamp: string;
