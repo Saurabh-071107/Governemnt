@@ -53,6 +53,22 @@ export const OutbreakSurveillanceView: React.FC = () => {
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
 
+  // Emergency vet dispatch state
+  const [dispatchingVet, setDispatchingVet] = useState(false);
+  const [dispatchSuccess, setDispatchSuccess] = useState(false);
+
+  const handleDispatchEmergencyVet = async () => {
+    if (!selectedCluster || dispatchingVet) return;
+    setDispatchingVet(true);
+    await AdminApiService.dispatchEmergencyVet({
+      district: selectedCluster.district,
+      notes: `Urgent response dispatched by State Surveillance Cell for ${selectedCluster.title || selectedCluster.district + ' Agro-Cluster'}. Risk Score: ${selectedCluster.combinedScore || 85}/100.`
+    });
+    setDispatchingVet(false);
+    setDispatchSuccess(true);
+    setTimeout(() => setDispatchSuccess(false), 5000);
+  };
+
   useEffect(() => {
     loadLayers();
   }, []);
@@ -337,6 +353,52 @@ export const OutbreakSurveillanceView: React.FC = () => {
                 <div style={{ fontSize: 12, color: '#475569' }}>
                   <strong>Official Biosecurity Protocol:</strong>{' '}
                   {selectedCluster.recommendation || 'Veterinary attention recommended immediately. Enforce ring vaccination.'}
+                </div>
+
+                {/* Emergency Vet Dispatch Action */}
+                <div style={{ marginTop: 8 }}>
+                  {dispatchSuccess && (
+                    <div style={{
+                      padding: '10px 12px',
+                      backgroundColor: '#dcfce7',
+                      color: '#166534',
+                      borderRadius: 8,
+                      border: '1px solid #86efac',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      marginBottom: 10,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8
+                    }}>
+                      <span style={{ fontSize: 16 }}>🚨</span>
+                      <span>Emergency Vet Dispatched! A priority video consultation case has been queued on the field veterinarian's mobile app.</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDispatchEmergencyVet}
+                    disabled={dispatchingVet}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      backgroundColor: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      cursor: dispatchingVet ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                    }}
+                  >
+                    <AlertTriangle size={15} />
+                    {dispatchingVet ? 'Dispatching Emergency Response...' : 'Dispatch Emergency Field Vet'}
+                  </button>
                 </div>
               </div>
             ) : (
