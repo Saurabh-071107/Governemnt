@@ -1,8 +1,8 @@
 import { AdminKPIs, VeterinarianRecord, SurveillanceLayersData, AuditLogItem } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL || (
-  typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
-    ? 'https://backend-644iz0cq6-kishan-sathi.vercel.app/api'
+  typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
+    ? 'https://pashu-seva-backend.onrender.com/api'
     : 'http://localhost:5000/api'
 );
 
