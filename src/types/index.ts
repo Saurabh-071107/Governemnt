@@ -25,6 +25,8 @@ export interface VeterinarianRecord {
   experienceYears?: number;
   district: string;
   state: string;
+  certificateUrl?: string;
+  assignedTempPassword?: string;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'pending' | 'verified';
   rejectionReason?: string;
   verifiedAt?: string;

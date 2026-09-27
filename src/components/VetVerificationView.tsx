@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { UserCheck, XCircle, ShieldCheck, Search, Award, Building, Phone, Stethoscope, AlertCircle } from 'lucide-react';
+import { UserCheck, XCircle, ShieldCheck, Search, Award, Building, Phone, Stethoscope, AlertCircle, FileText, ExternalLink, Copy, Check } from 'lucide-react';
 import { VeterinarianRecord } from '../types';
 
 interface VetVerificationViewProps {
   vets: VeterinarianRecord[];
-  onVerifyVet: (vetId: string, status: 'VERIFIED' | 'REJECTED', reason?: string) => Promise<void>;
+  onVerifyVet: (vetId: string, status: 'VERIFIED' | 'REJECTED', reason?: string) => Promise<any>;
 }
 
 export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, onVerifyVet }) => {
@@ -13,6 +13,8 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
   const [actionType, setActionType] = useState<'VERIFY' | 'REJECT' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string; doctorName: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const filteredVets = vets.filter(v => 
     v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -23,12 +25,23 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
   const handleConfirmAction = async () => {
     if (!selectedVet || !actionType) return;
     setProcessing(true);
-    await onVerifyVet(
+    const res: any = await onVerifyVet(
       selectedVet.id,
       actionType === 'VERIFY' ? 'VERIFIED' : 'REJECTED',
       rejectionReason
     );
     setProcessing(false);
+    if (actionType === 'VERIFY') {
+      const creds = res?.credentials || {
+        email: selectedVet.email || `${selectedVet.doctorId.toLowerCase().replace(/[^a-z0-9]/g, '')}@vetcare.in`,
+        password: `Vet@${selectedVet.doctorId.replace(/[^a-zA-Z0-9]/g, '') || '2026'}`
+      };
+      setGeneratedCredentials({
+        doctorName: selectedVet.name,
+        email: creds.email,
+        password: creds.password
+      });
+    }
     setSelectedVet(null);
     setActionType(null);
     setRejectionReason('');
@@ -66,6 +79,7 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
               <th>Qualifications</th>
               <th>Dispensary / Clinic</th>
               <th>District & State</th>
+              <th>Certificate</th>
               <th>Verification Status</th>
               <th>Actions</th>
             </tr>
@@ -81,6 +95,7 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
                   <td>
                     <div style={{ fontWeight: 700, color: '#0f172a' }}>{vet.name}</div>
                     <div style={{ fontSize: 12, color: '#64748b' }}>{vet.phone}</div>
+                    {vet.email && <div style={{ fontSize: 11, color: '#0284c7' }}>{vet.email}</div>}
                   </td>
                   <td>
                     <span style={{
@@ -104,6 +119,31 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
                   <td>
                     <div style={{ fontWeight: 600 }}>{vet.district}</div>
                     <div style={{ fontSize: 12, color: '#64748b' }}>{vet.state}</div>
+                  </td>
+                  <td>
+                    {vet.certificateUrl ? (
+                      <a
+                        href={vet.certificateUrl.startsWith('http') ? vet.certificateUrl : `http://localhost:5000${vet.certificateUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          background: '#e0f2fe',
+                          color: '#0284c7',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          textDecoration: 'none'
+                        }}
+                      >
+                        <FileText size={13} /> View Doc <ExternalLink size={11} />
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>None Attached</span>
+                    )}
                   </td>
                   <td>
                     {isVerified && <span className="badge-verified">VERIFIED</span>}
@@ -199,7 +239,7 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
 
             <p style={{ fontSize: 13, color: '#475569', marginBottom: 16 }}>
               {actionType === 'VERIFY' 
-                ? 'Approving this veterinarian admits them into the autonomous clinical assignment pool. They will be routed cases matching their district and lowest workload.'
+                ? 'Approving this veterinarian creates/activates their practitioner account and generates an official login password for the Pashu Seva Vet mobile app.'
                 : 'Rejecting this practitioner will immediately exclude them from receiving teleconsultation cases.'}
             </p>
 
@@ -254,7 +294,60 @@ export const VetVerificationView: React.FC<VetVerificationViewProps> = ({ vets, 
                 onClick={handleConfirmAction}
                 disabled={processing}
               >
-                {processing ? 'Processing...' : (actionType === 'VERIFY' ? 'Confirm Official Verification' : 'Confirm Rejection')}
+                {processing ? 'Processing...' : (actionType === 'VERIFY' ? 'Confirm Official Verification & Issue Credentials' : 'Confirm Rejection')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generated Credentials Modal */}
+      {generatedCredentials && (
+        <div className="modal-overlay" onClick={() => setGeneratedCredentials(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 460 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={28} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>Practitioner Verified!</h3>
+                <p style={{ fontSize: 12, color: '#64748b' }}>Account activated and login credentials issued.</p>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: '#475569', marginBottom: 12 }}>
+                Doctor: <strong>{generatedCredentials.doctorName}</strong>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 2 }}>Login Email:</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', background: '#fff', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: 6 }}>
+                  {generatedCredentials.email}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 2 }}>Assigned Password:</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', background: '#fff', border: '1px solid #cbd5e1', padding: '6px 10px', borderRadius: 6, letterSpacing: 1 }}>
+                  {generatedCredentials.password}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 20 }}>
+              The veterinarian can now log into the <strong>Pashu Seva Vet App</strong> using this Email ID and Password.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                className="btn-gov-primary"
+                onClick={() => {
+                  navigator.clipboard?.writeText?.(`Email: ${generatedCredentials.email}\nPassword: ${generatedCredentials.password}`);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                  setGeneratedCredentials(null);
+                }}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />} Copy & Close
               </button>
             </div>
           </div>

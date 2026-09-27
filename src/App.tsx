@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { OverviewView } from './components/OverviewView';
@@ -6,29 +7,29 @@ import { VetVerificationView } from './components/VetVerificationView';
 import { OutbreakSurveillanceView } from './components/OutbreakSurveillanceView';
 import { AnimalDossierView } from './components/AnimalDossierView';
 import { AuditLogsView } from './components/AuditLogsView';
-import { AdminApiService } from './services/api';
+import { AdminApiService, SOCKET_URL } from './services/api';
 import { AdminTab, AdminKPIs, VeterinarianRecord } from './types';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [stats, setStats] = useState<AdminKPIs>({
-    farmersCount: 18,
-    animalsCount: 42,
-    totalVets: 8,
-    verifiedVetsCount: 5,
-    pendingVetsCount: 2,
-    rejectedVetsCount: 1,
-    activeCasesCount: 7,
-    completedCasesCount: 29,
-    totalConsultations: 34,
-    totalLabTests: 19,
-    activeOutbreaksCount: 2,
+    farmersCount: 0,
+    animalsCount: 0,
+    totalVets: 0,
+    verifiedVetsCount: 0,
+    pendingVetsCount: 0,
+    rejectedVetsCount: 0,
+    activeCasesCount: 0,
+    completedCasesCount: 0,
+    totalConsultations: 0,
+    totalLabTests: 0,
+    activeOutbreaksCount: 0,
     diseaseDistribution: {
-      'Foot and Mouth Disease': 4,
-      'Lumpy Skin Disease': 3,
-      'Clinical Mastitis': 6,
-      'Bovine Respiratory Disease': 2,
-      'General Pyrexia': 5
+      'Foot and Mouth Disease': 0,
+      'Lumpy Skin Disease': 0,
+      'Clinical Mastitis': 0,
+      'Bovine Respiratory Disease': 0,
+      'General Pyrexia': 0
     }
   });
   const [vets, setVets] = useState<VeterinarianRecord[]>([]);
@@ -44,25 +45,49 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // 1. Periodic background polling every 8 seconds
     const interval = setInterval(loadData, 8000);
-    return () => clearInterval(interval);
-  }, [activeTab]);
+
+    // 2. Real-time WebSocket event listener for instant push
+    let socket: any = null;
+    try {
+      socket = io(SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 2000
+      });
+
+      socket.on('kpi_update', (payload: any) => {
+        console.log('[Gov Admin] Live real-time KPI update received:', payload);
+        loadData();
+      });
+    } catch (err) {
+      console.warn('[Socket.io connection notice]', err);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (socket) socket.disconnect();
+    };
+  }, []);
 
 
   const handleVerifyVet = async (vetId: string, status: 'VERIFIED' | 'REJECTED', reason: string = '') => {
-    await AdminApiService.verifyVet(vetId, status, reason);
+    const res = await AdminApiService.verifyVet(vetId, status, reason);
     setVets(prev => prev.map(v => {
       if (v.id === vetId) {
         return {
           ...v,
           verificationStatus: status,
           rejectionReason: reason,
+          assignedTempPassword: res.credentials?.password || v.assignedTempPassword,
           verifiedAt: new Date().toISOString()
         };
       }
       return v;
     }));
     await loadData();
+    return res;
   };
 
   const pendingVetCount = vets.filter(v => v.verificationStatus === 'PENDING' || (!v.verificationStatus && v.verificationStatus !== 'VERIFIED')).length;
@@ -84,6 +109,7 @@ export const App: React.FC = () => {
               stats={stats}
               onGoToVetVerification={() => setActiveTab('vet-verification')}
               onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
+              onRefresh={loadData}
             />
           )}
 

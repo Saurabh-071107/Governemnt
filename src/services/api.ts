@@ -1,30 +1,26 @@
 import { AdminKPIs, VeterinarianRecord, SurveillanceLayersData, AuditLogItem } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || (
-  typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
-    ? 'https://pashu-seva-backend.onrender.com/api'
-    : 'http://localhost:5000/api'
-);
-
+export const BASE_URL = import.meta.env.VITE_API_URL || 'https://pashu-seva-backend.onrender.com/api';
+export const SOCKET_URL = BASE_URL.replace(/\/api\/?$/, '');
 
 const defaultStats: AdminKPIs = {
-  farmersCount: 18,
-  animalsCount: 42,
-  totalVets: 8,
-  verifiedVetsCount: 5,
-  pendingVetsCount: 2,
-  rejectedVetsCount: 1,
-  activeCasesCount: 7,
-  completedCasesCount: 29,
-  totalConsultations: 34,
-  totalLabTests: 19,
-  activeOutbreaksCount: 2,
+  farmersCount: 0,
+  animalsCount: 0,
+  totalVets: 0,
+  verifiedVetsCount: 0,
+  pendingVetsCount: 0,
+  rejectedVetsCount: 0,
+  activeCasesCount: 0,
+  completedCasesCount: 0,
+  totalConsultations: 0,
+  totalLabTests: 0,
+  activeOutbreaksCount: 0,
   diseaseDistribution: {
-    'Foot and Mouth Disease': 4,
-    'Lumpy Skin Disease': 3,
-    'Clinical Mastitis': 6,
-    'Bovine Respiratory Disease': 2,
-    'General Pyrexia / Inappetence': 5
+    'Foot and Mouth Disease': 0,
+    'Lumpy Skin Disease': 0,
+    'Clinical Mastitis': 0,
+    'Bovine Respiratory Disease': 0,
+    'General Pyrexia / Inappetence': 0
   }
 };
 
@@ -111,17 +107,19 @@ export const AdminApiService = {
     return defaultVets;
   },
 
-  async verifyVet(vetId: string, status: 'VERIFIED' | 'REJECTED', rejectionReason: string = ''): Promise<boolean> {
+  async verifyVet(vetId: string, status: 'VERIFIED' | 'REJECTED', rejectionReason: string = ''): Promise<{ success: boolean; credentials?: { email: string; password: string } }> {
     try {
       const res = await fetch(`${BASE_URL}/admin/vets/${vetId}/verify`, {
         method: 'PATCH',
         headers: this.getAuthHeader(),
         body: JSON.stringify({ status, rejectionReason })
       });
-      return res.ok;
-    } catch (_) {
-      return true;
-    }
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, credentials: data.credentials };
+      }
+    } catch (_) {}
+    return { success: true };
   },
 
   async fetchSurveillanceLayers(): Promise<SurveillanceLayersData | null> {

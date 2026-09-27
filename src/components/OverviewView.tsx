@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Users, 
   Tag, 
@@ -10,7 +10,8 @@ import {
   FileCheck2,
   TrendingUp,
   MapPin,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { AdminKPIs } from '../types';
 
@@ -18,13 +19,24 @@ interface OverviewViewProps {
   stats: AdminKPIs;
   onGoToVetVerification: () => void;
   onGoToOutbreakMap: () => void;
+  onRefresh?: () => void;
 }
 
 export const OverviewView: React.FC<OverviewViewProps> = ({
   stats,
   onGoToVetVerification,
-  onGoToOutbreakMap
+  onGoToOutbreakMap,
+  onRefresh
 }) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualSync = async () => {
+    if (!onRefresh || isRefreshing) return;
+    setIsRefreshing(true);
+    await onRefresh();
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
   const kpiCards = [
     { title: 'Registered Farmers', value: stats.farmersCount, icon: Users, color: '#0284c7', bg: '#e0f2fe' },
     { title: 'Registered Livestock', value: stats.animalsCount, icon: Tag, color: '#059669', bg: '#d1fae5' },
@@ -50,18 +62,32 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         boxShadow: '0 10px 25px rgba(15, 23, 42, 0.2)'
       }}>
         <div>
-          <span style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            background: 'rgba(45, 212, 191, 0.2)',
-            color: '#2dd4bf',
-            padding: '4px 10px',
-            borderRadius: 9999
-          }}>
-            Integrated Disease Surveillance Framework
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              background: 'rgba(45, 212, 191, 0.2)',
+              color: '#2dd4bf',
+              padding: '4px 10px',
+              borderRadius: 9999
+            }}>
+              Integrated Disease Surveillance Framework
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              padding: '3px 8px',
+              borderRadius: 9999
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 6px #10b981' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399', letterSpacing: '0.05em' }}>LIVE REALTIME SYNC</span>
+            </div>
+          </div>
           <h1 style={{ fontSize: 24, fontWeight: 800, marginTop: 10 }}>
             Livestock Health Intelligence & Biosecurity Network
           </h1>
@@ -71,6 +97,28 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
+          {onRefresh && (
+            <button
+              onClick={handleManualSync}
+              disabled={isRefreshing}
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                fontWeight: 600,
+                padding: '10px 16px',
+                borderRadius: 8,
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer'
+              }}
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'spin-icon' : ''} />
+              {isRefreshing ? 'Syncing...' : 'Sync Live'}
+            </button>
+          )}
           {stats.pendingVetsCount > 0 && (
             <button
               onClick={onGoToVetVerification}

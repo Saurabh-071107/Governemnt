@@ -181,16 +181,45 @@ export const AnimalDossierView: React.FC = () => {
             {dossier.laboratoryTests.length === 0 ? (
               <p style={{ fontSize: 13, color: '#94a3b8' }}>No laboratory diagnostic investigations logged.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {dossier.laboratoryTests.map((t: any) => (
-                  <div key={t.bookingId} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13 }}>
-                    <div>
-                      <strong>{t.testType}</strong>
-                      <div style={{ fontSize: 12, color: '#64748b' }}>{t.labName}</div>
+                  <div key={t.bookingId} style={{ padding: '12px 16px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, background: t.report?.isAbnormal ? '#fef2f2' : '#ffffff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <strong style={{ fontSize: 14, color: '#0f172a' }}>{t.testType}</strong>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t.labName} • Slot: {t.scheduledDate || 'Standard'} ({t.slotTime || 'Morning'})</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span className={t.report?.isAbnormal ? 'badge-quarantined' : 'badge-verified'}>
+                          {t.report?.isAbnormal ? 'Abnormal Findings' : t.status}
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span className="badge-verified">{t.status}</span>
-                    </div>
+
+                    {t.report && (
+                      <div style={{ marginTop: 10, padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontWeight: 700, color: t.report.isAbnormal ? '#b91c1c' : '#0f172a', fontSize: 12.5 }}>
+                          Diagnostic Finding: {t.report.resultSummary || t.report.testResult}
+                        </div>
+                        {t.report.parameters && Object.keys(t.report.parameters).length > 0 && (
+                          <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {Object.entries(t.report.parameters).map(([k, v]) => (
+                              <span key={k} style={{ fontSize: 11, background: '#ffffff', padding: '3px 8px', borderRadius: 4, border: '1px solid #cbd5e1' }}>
+                                <strong>{k}:</strong> {String(v)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {t.report.observations && (
+                          <div style={{ marginTop: 6, fontSize: 11.5, color: '#475569', fontStyle: 'italic' }}>
+                            Pathologist Remarks: {t.report.observations}
+                          </div>
+                        )}
+                        <div style={{ marginTop: 6, fontSize: 10.5, color: '#94a3b8' }}>
+                          Verified by {t.report.staffName || 'Laboratory Technologist'} • Certified at {new Date(t.report.finalizedAt || Date.now()).toLocaleDateString()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
