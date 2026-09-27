@@ -54,6 +54,35 @@ export const AnimalDossierView: React.FC = () => {
         </button>
       </form>
 
+      {/* Quick Lookup Chips */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Quick Sample Tags:</span>
+        {['ET-893421', 'ET-771204', 'ET-550192', 'MH-PUN-001'].map(tag => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => {
+              setSearchTag(tag);
+              AdminApiService.fetchAnimalDossier(tag).then(res => {
+                if (res && res.animal) setDossier(res);
+              });
+            }}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 6,
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #cbd5e1',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#0369a1',
+              cursor: 'pointer'
+            }}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div style={{ padding: '12px 16px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
           {error}

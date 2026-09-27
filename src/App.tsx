@@ -7,6 +7,9 @@ import { VetVerificationView } from './components/VetVerificationView';
 import { OutbreakSurveillanceView } from './components/OutbreakSurveillanceView';
 import { AnimalDossierView } from './components/AnimalDossierView';
 import { AuditLogsView } from './components/AuditLogsView';
+import { EmergencyDispatchView } from './components/EmergencyDispatchView';
+import { AISurveillanceIntelligenceView } from './components/AISurveillanceIntelligenceView';
+import { MarketplaceVerificationView } from './components/MarketplaceVerificationView';
 import { AdminApiService, SOCKET_URL } from './services/api';
 import { AdminTab, AdminKPIs, VeterinarianRecord } from './types';
 
@@ -33,6 +36,7 @@ export const App: React.FC = () => {
     }
   });
   const [vets, setVets] = useState<VeterinarianRecord[]>([]);
+  const [emergencyDutyCount, setEmergencyDutyCount] = useState(0);
 
   const loadData = async () => {
     const [statsData, vetsData] = await Promise.all([
@@ -41,6 +45,11 @@ export const App: React.FC = () => {
     ]);
     if (statsData) setStats(statsData);
     if (vetsData) setVets(vetsData);
+    // Also refresh emergency duty count
+    try {
+      const edData = await AdminApiService.fetchEmergencyDutyVets();
+      setEmergencyDutyCount(edData.count);
+    } catch (_) {}
   };
 
   useEffect(() => {
@@ -98,6 +107,7 @@ export const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingVetCount={pendingVetCount}
+        emergencyDutyCount={emergencyDutyCount}
       />
 
       <div className="admin-content">
@@ -109,6 +119,8 @@ export const App: React.FC = () => {
               stats={stats}
               onGoToVetVerification={() => setActiveTab('vet-verification')}
               onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
+              onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
+              onGoToMarketplaceVerification={() => setActiveTab('marketplace-verification')}
               onRefresh={loadData}
             />
           )}
@@ -120,8 +132,24 @@ export const App: React.FC = () => {
             />
           )}
 
+          {activeTab === 'ai-surveillance' && (
+            <AISurveillanceIntelligenceView />
+          )}
+
           {activeTab === 'outbreak-map' && (
             <OutbreakSurveillanceView />
+          )}
+
+          {activeTab === 'emergency-dispatch' && (
+            <EmergencyDispatchView />
+          )}
+
+          {activeTab === 'marketplace-verification' && (
+            <MarketplaceVerificationView
+              onInspectAnimalTag={(tag) => {
+                setActiveTab('medical-dossier');
+              }}
+            />
           )}
 
           {activeTab === 'medical-dossier' && (
@@ -133,6 +161,7 @@ export const App: React.FC = () => {
               stats={stats}
               onGoToVetVerification={() => setActiveTab('vet-verification')}
               onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
+              onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
             />
           )}
 
@@ -141,6 +170,7 @@ export const App: React.FC = () => {
               stats={stats}
               onGoToVetVerification={() => setActiveTab('vet-verification')}
               onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
+              onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
             />
           )}
 

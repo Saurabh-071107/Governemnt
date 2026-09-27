@@ -19,6 +19,8 @@ interface OverviewViewProps {
   stats: AdminKPIs;
   onGoToVetVerification: () => void;
   onGoToOutbreakMap: () => void;
+  onGoToAISurveillance?: () => void;
+  onGoToMarketplaceVerification?: () => void;
   onRefresh?: () => void;
 }
 
@@ -26,6 +28,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   stats,
   onGoToVetVerification,
   onGoToOutbreakMap,
+  onGoToAISurveillance,
+  onGoToMarketplaceVerification,
   onRefresh
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -39,13 +43,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   const kpiCards = [
     { title: 'Registered Farmers', value: stats.farmersCount, icon: Users, color: '#0284c7', bg: '#e0f2fe' },
-    { title: 'Registered Livestock', value: stats.animalsCount, icon: Tag, color: '#059669', bg: '#d1fae5' },
+    { title: 'Registered Stock (Livestock)', value: stats.animalsCount, icon: Tag, color: '#059669', bg: '#d1fae5' },
     { title: 'Verified Veterinarians', value: stats.verifiedVetsCount, icon: UserCheck, color: '#16a34a', bg: '#dcfce7' },
     { title: 'Pending Vet Verifications', value: stats.pendingVetsCount, icon: Stethoscope, color: '#d97706', bg: '#fef3c7', action: onGoToVetVerification },
-    { title: 'Active Clinical Cases', value: stats.activeCasesCount, icon: Activity, color: '#dc2626', bg: '#fee2e2' },
-    { title: 'Teleconsultations Completed', value: stats.totalConsultations, icon: CheckCircle2, color: '#0f766e', bg: '#ccfbf1' },
+    { title: 'Active Teleconsultations', value: stats.activeCasesCount, icon: Activity, color: '#dc2626', bg: '#fee2e2' },
+    { title: 'Completed Teleconsultations', value: stats.completedCasesCount || stats.totalConsultations, icon: CheckCircle2, color: '#0f766e', bg: '#ccfbf1' },
     { title: 'Diagnostic Lab Tests', value: stats.totalLabTests, icon: FlaskConical, color: '#7c3aed', bg: '#ede9fe' },
-    { title: 'Active Outbreak Clusters', value: stats.activeOutbreaksCount, icon: AlertTriangle, color: '#b91c1c', bg: '#fecaca', action: onGoToOutbreakMap },
+    { title: 'Total Outbreak Clusters', value: stats.activeOutbreaksCount, icon: AlertTriangle, color: '#b91c1c', bg: '#fecaca', action: onGoToOutbreakMap },
   ];
 
   return (
@@ -135,6 +139,27 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               }}
             >
               Verify Vets ({stats.pendingVetsCount})
+            </button>
+          )}
+          {onGoToAISurveillance && (
+            <button
+              onClick={onGoToAISurveillance}
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                fontWeight: 800,
+                padding: '10px 18px',
+                borderRadius: 8,
+                fontSize: 13,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              ⚡ AI Outbreak Sentinel
             </button>
           )}
           <button

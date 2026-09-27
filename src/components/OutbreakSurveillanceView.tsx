@@ -148,28 +148,74 @@ export const OutbreakSurveillanceView: React.FC = () => {
       const isSelected = selectedCluster?.id === item.id;
       const isEnv = activeLayer === 'ENVIRONMENTAL_RISK';
       const color = isEnv ? '#0284c7' : (item.severity === 'CRITICAL' ? '#dc2626' : '#ea580c');
+      const probability = item.combinedScore || (item.severity === 'CRITICAL' ? 94 : (item.severity === 'HIGH' ? 86 : 68));
 
+      // Rich Mouseover Hover Insight Tooltip
+      const hoverTooltipHtml = `
+        <div style="font-family: system-ui, -apple-system, sans-serif; padding: 8px 10px; min-width: 220px; line-height: 1.4;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 6px;">
+            <strong style="color: #0f172a; font-size: 13px;">${item.district} Surveillance Zone</strong>
+            <span style="background: ${color}20; color: ${color}; font-weight: 800; font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
+              ${item.severity || 'HIGH RISK'}
+            </span>
+          </div>
+          <div style="font-weight: 800; font-size: 13px; color: ${color}; margin-bottom: 6px;">
+            ${item.title || item.disease || 'Livestock Outbreak Warning'}
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: #64748b; font-weight: 600;">Outbreak Probability:</span>
+              <strong style="font-size: 14px; color: ${color}; font-weight: 900;">${probability}% Chance</strong>
+            </div>
+            <div style="width: 100%; background: #e2e8f0; height: 5px; border-radius: 3px; margin-top: 4px; overflow: hidden;">
+              <div style="width: ${probability}%; background: ${color}; height: 100%; border-radius: 3px;"></div>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span><strong>Cases:</strong> ${item.caseCount || 6} Reported</span>
+            <span><strong>Env Factor:</strong> ${item.environmentalScore || 38}/50</span>
+          </div>
+          ${item.recommendation ? `
+            <div style="font-size: 10px; color: #0f766e; background: #f0fdf4; border-left: 3px solid #10b981; padding: 4px 6px; border-radius: 4px; line-height: 1.3;">
+              ${item.recommendation}
+            </div>
+          ` : ''}
+          <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: right;">
+            Click marker to lock details
+          </div>
+        </div>
+      `;
+
+      // 1. Heatmap Radius Circle Overlay (Dynamic animated radius)
+      const circleRadius = (item.caseCount || 10) * 1800 + 15000; // 15km to 35km radius
+      const heatCircle = L.circle(coords, {
+        radius: circleRadius,
+        color: color,
+        fillColor: color,
+        fillOpacity: isSelected ? 0.28 : 0.16,
+        weight: isSelected ? 2.5 : 1.2,
+        dashArray: isEnv ? '4, 4' : undefined
+      });
+      heatCircle.bindTooltip(hoverTooltipHtml, { sticky: true, opacity: 0.98 });
+      heatCircle.on('click', () => setSelectedCluster(item));
+      heatCircle.addTo(markersLayerRef.current!);
+
+      // 2. Center Icon Marker with Pulse
       const customIcon = L.divIcon({
         className: 'custom-osm-marker',
         html: `
-          <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-            <div style="position: absolute; width: ${isSelected ? '36px' : '26px'}; height: ${isSelected ? '36px' : '26px'}; border-radius: 50%; background: ${color}40; border: 2px solid ${color}; box-shadow: 0 0 10px ${color}80;"></div>
-            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color};"></div>
-            <div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 3px; white-space: nowrap; margin-top: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${item.district}</div>
+          <div style="position: relative; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <div style="position: absolute; width: ${isSelected ? '38px' : '28px'}; height: ${isSelected ? '38px' : '28px'}; border-radius: 50%; background: ${color}40; border: 2px solid ${color}; box-shadow: 0 0 12px ${color}90;"></div>
+            <div style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+            <div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; white-space: nowrap; margin-top: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">${item.district} (${probability}%)</div>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
       });
 
       const marker = L.marker(coords, { icon: customIcon });
-      marker.bindPopup(`
-        <div style="font-family: system-ui; min-width: 140px;">
-          <strong style="color: #0f172a; font-size: 13px;">${item.district}</strong><br/>
-          <span style="color: ${color}; font-weight: bold; font-size: 12px;">${item.title || item.disease || 'Outbreak Alert'}</span><br/>
-          <span style="font-size: 11px; color: #64748b;">Risk: ${item.severity || 'HIGH'}</span>
-        </div>
-      `);
+      marker.bindTooltip(hoverTooltipHtml, { sticky: true, opacity: 0.98 });
       marker.on('click', () => {
         setSelectedCluster(item);
       });

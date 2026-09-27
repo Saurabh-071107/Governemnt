@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   LayoutDashboard, 
   UserCheck, 
@@ -6,9 +5,11 @@ import {
   FileText, 
   Activity, 
   FlaskConical, 
-  ShieldAlert,
-  Shield,
-  Layers
+  ShieldAlert, 
+  Shield, 
+  Siren,
+  Cpu,
+  ShoppingBag
 } from 'lucide-react';
 import { AdminTab } from '../types';
 
@@ -16,13 +17,17 @@ interface SidebarProps {
   activeTab: AdminTab;
   onTabChange: (tab: AdminTab) => void;
   pendingVetCount: number;
+  emergencyDutyCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, pendingVetCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, pendingVetCount, emergencyDutyCount = 0 }) => {
   const items = [
     { id: 'overview', label: 'Surveillance Overview', icon: LayoutDashboard },
     { id: 'vet-verification', label: 'Vet Credentialing', icon: UserCheck, badge: pendingVetCount },
+    { id: 'ai-surveillance', label: 'Pashu AI Outbreak Sentinel', icon: Cpu },
     { id: 'outbreak-map', label: 'Outbreak Intelligence Map', icon: MapPin },
+    { id: 'emergency-dispatch', label: 'Emergency Dispatch', icon: Siren, badge: emergencyDutyCount, badgeColor: '#dc2626' },
+    { id: 'marketplace-verification', label: 'Trade & Market Verification', icon: ShoppingBag },
     { id: 'medical-dossier', label: 'Livestock Dossier & PDF', icon: FileText },
     { id: 'cases', label: 'Telemedicine & Cases', icon: Activity },
     { id: 'lab-surveillance', label: 'Laboratory Operations', icon: FlaskConical },
@@ -86,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, pendin
               </div>
               {item.badge !== undefined && item.badge > 0 && (
                 <span style={{
-                  background: '#d97706',
+                  background: (item as any).badgeColor || '#d97706',
                   color: '#ffffff',
                   fontSize: 11,
                   fontWeight: 700,
