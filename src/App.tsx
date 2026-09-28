@@ -6,10 +6,12 @@ import { OverviewView } from './components/OverviewView';
 import { VetVerificationView } from './components/VetVerificationView';
 import { OutbreakSurveillanceView } from './components/OutbreakSurveillanceView';
 import { AnimalDossierView } from './components/AnimalDossierView';
-import { AuditLogsView } from './components/AuditLogsView';
+import { SecurityAuditView } from './components/SecurityAuditView';
 import { EmergencyDispatchView } from './components/EmergencyDispatchView';
 import { AISurveillanceIntelligenceView } from './components/AISurveillanceIntelligenceView';
 import { MarketplaceVerificationView } from './components/MarketplaceVerificationView';
+import { LaboratoryOperationsView } from './components/LaboratoryOperationsView';
+import { TelemedicineCasesView } from './components/TelemedicineCasesView';
 import { AdminApiService, SOCKET_URL } from './services/api';
 import { AdminTab, AdminKPIs, VeterinarianRecord } from './types';
 
@@ -121,6 +123,8 @@ export const App: React.FC = () => {
               onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
               onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
               onGoToMarketplaceVerification={() => setActiveTab('marketplace-verification')}
+              onGoToTelemedicine={() => setActiveTab('cases')}
+              onGoToLaboratory={() => setActiveTab('lab-surveillance')}
               onRefresh={loadData}
             />
           )}
@@ -157,25 +161,15 @@ export const App: React.FC = () => {
           )}
 
           {activeTab === 'cases' && (
-            <OverviewView
-              stats={stats}
-              onGoToVetVerification={() => setActiveTab('vet-verification')}
-              onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
-              onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
-            />
+            <TelemedicineCasesView />
           )}
 
           {activeTab === 'lab-surveillance' && (
-            <OverviewView
-              stats={stats}
-              onGoToVetVerification={() => setActiveTab('vet-verification')}
-              onGoToOutbreakMap={() => setActiveTab('outbreak-map')}
-              onGoToAISurveillance={() => setActiveTab('ai-surveillance')}
-            />
+            <LaboratoryOperationsView />
           )}
 
           {activeTab === 'audit-logs' && (
-            <AuditLogsView />
+            <SecurityAuditView />
           )}
         </main>
       </div>

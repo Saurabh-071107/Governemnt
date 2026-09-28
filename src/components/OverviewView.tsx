@@ -23,6 +23,8 @@ interface OverviewViewProps {
   onGoToOutbreakMap: () => void;
   onGoToAISurveillance?: () => void;
   onGoToMarketplaceVerification?: () => void;
+  onGoToTelemedicine?: () => void;
+  onGoToLaboratory?: () => void;
   onRefresh?: () => void;
 }
 
@@ -31,6 +33,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onGoToVetVerification,
   onGoToOutbreakMap,
   onGoToAISurveillance,
+  onGoToTelemedicine,
+  onGoToLaboratory,
   onRefresh
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -82,7 +86,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       img: '/assets/kpi-consultation.png',
       fallbackIcon: Activity, 
       color: '#dc2626', 
-      bg: '#fee2e2' 
+      bg: '#fee2e2',
+      action: onGoToTelemedicine
     },
     { 
       title: 'Completed Cases', 
@@ -90,7 +95,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       img: '/assets/kpi-completed.png',
       fallbackIcon: CheckCircle2, 
       color: '#0f766e', 
-      bg: '#ccfbf1' 
+      bg: '#ccfbf1',
+      action: onGoToTelemedicine
     },
     { 
       title: 'Diagnostic Lab Tests', 
@@ -98,7 +104,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
       img: '/assets/kpi-lab.png',
       fallbackIcon: FlaskConical, 
       color: '#7c3aed', 
-      bg: '#ede9fe' 
+      bg: '#ede9fe',
+      action: onGoToLaboratory
     },
     { 
       title: 'Active Outbreak Clusters', 

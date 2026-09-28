@@ -62,11 +62,112 @@ export interface SurveillanceLayersData {
 export interface AuditLogItem {
   id?: string;
   actorRole: string;
+  actorName?: string;
+  actorId?: string;
   action: string;
   entityType: string;
   entityId?: string;
   details?: any;
+  ipAddress?: string;
   createdAt: string;
+}
+
+export interface LabTestBooking {
+  id: string;
+  bookingId: string;
+  testBookingId?: string;
+  farmerId?: string;
+  farmerName?: string;
+  farmerPhone?: string;
+  animalId?: string;
+  animalTag: string;
+  animalType?: string;
+  caseId?: string | null;
+  laboratoryId: string;
+  labName: string;
+  district: string;
+  testType: string;
+  date: string;
+  slotDate?: string;
+  slotId?: string;
+  slotTime?: string;
+  collectionOtp?: string;
+  collectorName?: string;
+  collectorPhone?: string;
+  notes?: string;
+  status: 'TEST_BOOKED' | 'ACCEPTED' | 'SAMPLE_COLLECTED' | 'IN_TESTING' | 'REPORT_AVAILABLE' | 'COMPLETED' | 'CANCELLED' | string;
+  createdAt: string;
+  reportId?: string;
+  report?: LabTestReport;
+}
+
+export interface LabTestReport {
+  id: string;
+  reportId: string;
+  bookingId: string;
+  animalTag: string;
+  testType: string;
+  testResult: string;
+  resultSummary: string;
+  parameters?: Record<string, string>;
+  observations?: string;
+  isAbnormal: boolean;
+  finalizedBy?: string;
+  staffName?: string;
+  finalizedAt?: string;
+}
+
+export interface DiagnosticLaboratory {
+  id: string;
+  code: string;
+  name: string;
+  address: string;
+  district: string;
+  state: string;
+  phone: string;
+  testsOffered: string[];
+}
+
+export interface ClinicalCaseItem {
+  id: string;
+  caseId?: string;
+  animalId: string;
+  farmerId: string;
+  vetId?: string;
+  assignedVetId?: string;
+  vetName?: string;
+  symptoms: string[];
+  description?: string;
+  photoUrls?: string[];
+  aiRiskScore?: number;
+  aiPredictedDisease?: string;
+  aiConfidence?: number;
+  aiSeverity?: string;
+  suspectedOutbreak?: boolean;
+  status: 'QUEUED' | 'PENDING_ACCEPTANCE' | 'VET_REQUIRED' | 'UNDER_EXAMINATION' | 'under_examination' | 'TREATED' | 'treated' | 'RESOLVED' | 'resolved' | 'CLOSED' | 'COMPLETED' | string;
+  vetNotes?: string;
+  recommendedTests?: {
+    id: string;
+    testName: string;
+    labName: string;
+    status: string;
+    orderedAt: string;
+  }[];
+  prescriptions?: {
+    id: string;
+    medicineName: string;
+    dosage: string;
+    instructions: string;
+    withdrawalPeriodDays?: number;
+  }[];
+  district?: string;
+  state?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AIPredictedOutbreak {
