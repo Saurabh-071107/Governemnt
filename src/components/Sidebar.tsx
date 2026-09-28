@@ -1,9 +1,11 @@
 import React from 'react';
 import { 
-  Home,
   LayoutDashboard, 
+  Sparkles,
   UserCheck, 
   MapPin, 
+  Siren,
+  Store,
   FileText, 
   Activity, 
   FlaskConical, 
@@ -19,11 +21,19 @@ interface SidebarProps {
   emergencyDutyCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, pendingVetCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  activeTab, 
+  onTabChange, 
+  pendingVetCount,
+  emergencyDutyCount 
+}) => {
   const items: { id: AdminTab; label: string; icon: any; badge?: number; badgeColor?: string }[] = [
     { id: 'overview', label: 'Surveillance Overview', icon: LayoutDashboard },
-    { id: 'vet-verification', label: 'Vet Credentialing', icon: UserCheck, badge: pendingVetCount > 0 ? pendingVetCount : 2, badgeColor: '#f59e0b' },
+    { id: 'ai-surveillance', label: 'Pashu AI Intelligence', icon: Sparkles, badge: 3, badgeColor: '#8b5cf6' },
     { id: 'outbreak-map', label: 'Outbreak Intelligence Map', icon: MapPin },
+    { id: 'emergency-dispatch', label: 'Emergency Vet Dispatch', icon: Siren, badge: emergencyDutyCount && emergencyDutyCount > 0 ? emergencyDutyCount : undefined, badgeColor: '#ef4444' },
+    { id: 'marketplace-verification', label: 'Trade & Marketplace', icon: Store },
+    { id: 'vet-verification', label: 'Vet Credentialing', icon: UserCheck, badge: pendingVetCount > 0 ? pendingVetCount : 2, badgeColor: '#f59e0b' },
     { id: 'medical-dossier', label: 'Livestock Dossier & PDF', icon: FileText },
     { id: 'cases', label: 'Telemedicine & Cases', icon: Activity },
     { id: 'lab-surveillance', label: 'Laboratory Operations', icon: FlaskConical },
