@@ -38,15 +38,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, pendin
           width: 38,
           height: 38,
           borderRadius: 10,
-          background: '#047857',
+          overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#ffffff',
           boxShadow: '0 2px 8px rgba(4, 120, 87, 0.25)',
           flexShrink: 0
         }}>
-          <Home size={19} />
+          <img src="/assets/app_logo.png" alt="Pashu Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 13.5, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.2 }}>

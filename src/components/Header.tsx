@@ -9,7 +9,12 @@ export const Header: React.FC<HeaderProps> = ({ onRefresh }) => {
   return (
     <header className="admin-header">
       {/* Left: State Branding */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img 
+          src="/assets/app_logo.png" 
+          alt="Pashu Seva Logo" 
+          style={{ height: 44, width: 44, objectFit: 'contain', borderRadius: '50%' }} 
+        />
         <img 
           src="/assets/state_seal.png" 
           alt="Government of Maharashtra Seal" 
