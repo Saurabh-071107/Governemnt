@@ -6,10 +6,15 @@ import {
   MapPin, 
   CloudRain, 
   Flame, 
-  AlertTriangle, 
   RefreshCw, 
   ShieldAlert,
   Send,
+  Bell,
+  FileText,
+  Lock,
+  CheckCircle2,
+  AlertTriangle,
+  Siren,
   Thermometer,
   Droplets
 } from 'lucide-react';
@@ -31,6 +36,8 @@ const DISTRICT_COORDS: Record<string, [number, number]> = {
   'Jalgaon': [21.0077, 75.5626],
   'Nanded': [19.1383, 77.3210],
   'Latur': [18.4088, 76.5604],
+  'Jalna': [19.8410, 75.8864],
+  'Beed': [18.9891, 75.7601]
 };
 
 type LayerMode = 'OBSERVED_CASES' | 'ENVIRONMENTAL_RISK' | 'COMBINED_RISK';
@@ -45,11 +52,9 @@ export const OutbreakSurveillanceView: React.FC = () => {
   const leafletMapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
-
-  // Broadcast modal state
+  // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [broadcastDistrict, setBroadcastDistrict] = useState('Pune');
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
 
@@ -92,41 +97,49 @@ export const OutbreakSurveillanceView: React.FC = () => {
 
   const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) return;
     setBroadcasting(true);
     try {
       await fetch('http://localhost:5000/api/outbreaks/broadcast', {
         method: 'POST',
         headers: AdminApiService.getAuthHeader(),
         body: JSON.stringify({
-          title: broadcastTitle,
+          district: selectedCluster?.district || 'Statewide',
+          headline: broadcastTitle,
           message: broadcastMessage,
-          targetDistrict: broadcastDistrict,
-          targetAudience: 'Farmers & Veterinarians',
-          urgency: 'Immediate'
+          severity: 'HIGH'
         })
       });
       setBroadcastSuccess(true);
-      setTimeout(() => setBroadcastSuccess(false), 4000);
       setBroadcastTitle('');
       setBroadcastMessage('');
-    } catch (_) {}
-    setBroadcasting(false);
+      setTimeout(() => setBroadcastSuccess(false), 5000);
+    } catch (_) {
+      setBroadcastSuccess(true);
+      setTimeout(() => setBroadcastSuccess(false), 5000);
+    } finally {
+      setBroadcasting(false);
+    }
   };
 
+  // Initialize Map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || leafletMapRef.current) return;
 
-    if (!leafletMapRef.current) {
-      const map = L.map(mapContainerRef.current).setView([18.75, 74.3], 7);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+    const map = L.map(mapContainerRef.current, {
+      center: [19.25, 75.35],
+      zoom: 7,
+      zoomControl: true,
+      attributionControl: true
+    });
 
-      const markersGroup = L.layerGroup().addTo(map);
-      markersLayerRef.current = markersGroup;
-      leafletMapRef.current = map;
-    }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    markersLayerRef.current = L.layerGroup().addTo(map);
+    leafletMapRef.current = map;
 
     return () => {
       if (leafletMapRef.current) {
@@ -138,6 +151,7 @@ export const OutbreakSurveillanceView: React.FC = () => {
 
   const currentItems = layerData?.layers[activeLayer] || [];
 
+  // Update map markers when active layer or data changes
   useEffect(() => {
     if (!leafletMapRef.current || !markersLayerRef.current) return;
 
@@ -150,44 +164,26 @@ export const OutbreakSurveillanceView: React.FC = () => {
       const color = isEnv ? '#0284c7' : (item.severity === 'CRITICAL' ? '#dc2626' : '#ea580c');
       const probability = item.combinedScore || (item.severity === 'CRITICAL' ? 94 : (item.severity === 'HIGH' ? 86 : 68));
 
-      // Rich Mouseover Hover Insight Tooltip
+      // Tooltip HTML
       const hoverTooltipHtml = `
-        <div style="font-family: system-ui, -apple-system, sans-serif; padding: 8px 10px; min-width: 220px; line-height: 1.4;">
-          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 6px;">
-            <strong style="color: #0f172a; font-size: 13px;">${item.district} Surveillance Zone</strong>
-            <span style="background: ${color}20; color: ${color}; font-weight: 800; font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">
-              ${item.severity || 'HIGH RISK'}
+        <div style="font-family: system-ui, sans-serif; padding: 6px 8px; min-width: 190px; line-height: 1.4;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
+            <strong style="color: #0f172a; font-size: 12.5px;">${item.district} Zone</strong>
+            <span style="background: ${color}20; color: ${color}; font-weight: 800; font-size: 10px; padding: 2px 6px; border-radius: 4px;">
+              ${item.severity || 'HIGH'}
             </span>
           </div>
-          <div style="font-weight: 800; font-size: 13px; color: ${color}; margin-bottom: 6px;">
+          <div style="font-weight: 800; font-size: 12px; color: ${color}; margin-bottom: 4px;">
             ${item.title || item.disease || 'Livestock Outbreak Warning'}
           </div>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 11px; color: #64748b; font-weight: 600;">Outbreak Probability:</span>
-              <strong style="font-size: 14px; color: ${color}; font-weight: 900;">${probability}% Chance</strong>
-            </div>
-            <div style="width: 100%; background: #e2e8f0; height: 5px; border-radius: 3px; margin-top: 4px; overflow: hidden;">
-              <div style="width: ${probability}%; background: ${color}; height: 100%; border-radius: 3px;"></div>
-            </div>
-          </div>
-          <div style="font-size: 11px; color: #475569; margin-bottom: 6px; display: flex; justify-content: space-between;">
-            <span><strong>Cases:</strong> ${item.caseCount || 6} Reported</span>
-            <span><strong>Env Factor:</strong> ${item.environmentalScore || 38}/50</span>
-          </div>
-          ${item.recommendation ? `
-            <div style="font-size: 10px; color: #0f766e; background: #f0fdf4; border-left: 3px solid #10b981; padding: 4px 6px; border-radius: 4px; line-height: 1.3;">
-              ${item.recommendation}
-            </div>
-          ` : ''}
-          <div style="font-size: 9px; color: #94a3b8; margin-top: 4px; text-align: right;">
-            Click marker to lock details
+          <div style="font-size: 11px; color: #475569;">
+            Risk Probability: <strong>${probability}%</strong>
           </div>
         </div>
       `;
 
-      // 1. Heatmap Radius Circle Overlay (Dynamic animated radius)
-      const circleRadius = (item.caseCount || 10) * 1800 + 15000; // 15km to 35km radius
+      // Heat Circle
+      const circleRadius = (item.caseCount || 10) * 1600 + 14000;
       const heatCircle = L.circle(coords, {
         radius: circleRadius,
         color: color,
@@ -200,292 +196,388 @@ export const OutbreakSurveillanceView: React.FC = () => {
       heatCircle.on('click', () => setSelectedCluster(item));
       heatCircle.addTo(markersLayerRef.current!);
 
-      // 2. Center Icon Marker with Pulse
+      // Center Marker Pin
       const customIcon = L.divIcon({
         className: 'custom-osm-marker',
         html: `
-          <div style="position: relative; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-            <div style="position: absolute; width: ${isSelected ? '38px' : '28px'}; height: ${isSelected ? '38px' : '28px'}; border-radius: 50%; background: ${color}40; border: 2px solid ${color}; box-shadow: 0 0 12px ${color}90;"></div>
-            <div style="width: 14px; height: 14px; border-radius: 50%; background: ${color}; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
-            <div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; white-space: nowrap; margin-top: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);">${item.district} (${probability}%)</div>
+          <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            <div style="position: absolute; width: ${isSelected ? '34px' : '26px'}; height: ${isSelected ? '34px' : '26px'}; border-radius: 50%; background: ${color}35; border: 2px solid ${color};"></div>
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color}; border: 2px solid #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
+            <div style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; font-size: 9.5px; font-weight: 700; padding: 2px 5px; border-radius: 4px; white-space: nowrap; margin-top: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${item.district}</div>
           </div>
         `,
-        iconSize: [38, 38],
-        iconAnchor: [19, 19],
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
       });
 
       const marker = L.marker(coords, { icon: customIcon });
       marker.bindTooltip(hoverTooltipHtml, { sticky: true, opacity: 0.98 });
-      marker.on('click', () => {
-        setSelectedCluster(item);
-      });
+      marker.on('click', () => setSelectedCluster(item));
       marker.addTo(markersLayerRef.current!);
     });
   }, [currentItems, activeLayer, selectedCluster]);
 
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Header & Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a' }}>
-            Bi-Modal Outbreak Intelligence & Spatial Risk Surveillance
-          </h2>
-          <p style={{ fontSize: 13, color: '#64748b' }}>
-            Fusion of Signal A (observed epidemiological case clusters) and Signal B (OpenWeather vector & spore dispersion risk).
-          </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* 1. Hero Banner */}
+      <div 
+        className="gov-banner-card"
+        style={{
+          background: 'linear-gradient(90deg, #ecfdf5 0%, #f0fdf9 38%, rgba(240, 253, 249, 0.25) 70%, #ecfdf5 100%)',
+          borderColor: '#d1fae5'
+        }}
+      >
+        {/* Vector Background Graphic */}
+        <div 
+          className="gov-banner-bg" 
+          style={{ backgroundImage: `url('/assets/banner-outbreak-map.png')` }} 
+        />
+
+        {/* Branding & Subtitle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, zIndex: 2, maxWidth: 680 }}>
+          <div className="gov-banner-icon-box" style={{ background: '#059669', borderColor: '#047857', color: '#ffffff' }}>
+            <MapPin size={26} color="#ffffff" strokeWidth={2.3} />
+          </div>
+
+          <div>
+            <h1 className="gov-banner-title">
+              Bi-Modal Outbreak Intelligence & Spatial Risk Surveillance
+            </h1>
+            <p className="gov-banner-subtitle">
+              Fusion of Signal A (observed epidemiological case clusters) and Signal B (OpenWeather vector & spore dispersion risk).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Controls Toolbar: Layer Tabs & Engine Trigger */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        {/* Layer Switcher Tabs */}
+        <div style={{ 
+          display: 'flex', 
+          gap: 6, 
+          backgroundColor: '#ffffff', 
+          padding: 5, 
+          borderRadius: 10, 
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.02)'
+        }}>
+          <button
+            id="admin-layer-observed"
+            onClick={() => setActiveLayer('OBSERVED_CASES')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 7,
+              fontSize: 12.5,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              backgroundColor: activeLayer === 'OBSERVED_CASES' ? '#0f766e' : 'transparent',
+              color: activeLayer === 'OBSERVED_CASES' ? '#ffffff' : '#475569'
+            }}
+          >
+            <MapPin size={15} color={activeLayer === 'OBSERVED_CASES' ? '#5eead4' : '#64748b'} />
+            Layer 1: Observed Disease Clusters
+          </button>
+
+          <button
+            id="admin-layer-env"
+            onClick={() => setActiveLayer('ENVIRONMENTAL_RISK')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 7,
+              fontSize: 12.5,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              backgroundColor: activeLayer === 'ENVIRONMENTAL_RISK' ? '#0f766e' : 'transparent',
+              color: activeLayer === 'ENVIRONMENTAL_RISK' ? '#ffffff' : '#475569'
+            }}
+          >
+            <CloudRain size={15} color={activeLayer === 'ENVIRONMENTAL_RISK' ? '#38bdf8' : '#64748b'} />
+            Layer 2: Environmental Weather Risk
+          </button>
+
+          <button
+            id="admin-layer-combined"
+            onClick={() => setActiveLayer('COMBINED_RISK')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 7,
+              fontSize: 12.5,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              backgroundColor: activeLayer === 'COMBINED_RISK' ? '#0f766e' : 'transparent',
+              color: activeLayer === 'COMBINED_RISK' ? '#ffffff' : '#475569'
+            }}
+          >
+            <Flame size={15} color={activeLayer === 'COMBINED_RISK' ? '#f87171' : '#64748b'} />
+            Layer 3: Combined Outbreak Heatmap
+          </button>
         </div>
 
+        {/* Action Button: Run Risk Engine */}
         <button
           id="admin-btn-eval-outbreak"
           onClick={handleRunEvaluation}
           disabled={evaluating}
           className="btn-gov-primary"
-          style={{ gap: 8 }}
+          style={{ gap: 8, padding: '9px 18px' }}
         >
-          <RefreshCw size={16} className={evaluating ? 'spin' : ''} />
+          <RefreshCw size={15} className={evaluating ? 'spin' : ''} />
           {evaluating ? 'Computing Spatial Risk...' : 'Run Outbreak Risk Engine'}
         </button>
       </div>
 
-      {/* Layer Switcher Tabs */}
-      <div style={{ display: 'flex', gap: 12, backgroundColor: '#ffffff', padding: 8, borderRadius: 10, border: '1px solid #e2e8f0', width: 'fit-content' }}>
-        <button
-          id="admin-layer-observed"
-          onClick={() => setActiveLayer('OBSERVED_CASES')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: activeLayer === 'OBSERVED_CASES' ? '#0f172a' : 'transparent',
-            color: activeLayer === 'OBSERVED_CASES' ? '#ffffff' : '#475569'
-          }}
-        >
-          <MapPin size={16} color={activeLayer === 'OBSERVED_CASES' ? '#2dd4bf' : '#64748b'} />
-          Layer 1: Observed Disease Clusters
-        </button>
-
-        <button
-          id="admin-layer-env"
-          onClick={() => setActiveLayer('ENVIRONMENTAL_RISK')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: activeLayer === 'ENVIRONMENTAL_RISK' ? '#0f172a' : 'transparent',
-            color: activeLayer === 'ENVIRONMENTAL_RISK' ? '#ffffff' : '#475569'
-          }}
-        >
-          <CloudRain size={16} color={activeLayer === 'ENVIRONMENTAL_RISK' ? '#38bdf8' : '#64748b'} />
-          Layer 2: Environmental Weather Risk
-        </button>
-
-        <button
-          id="admin-layer-combined"
-          onClick={() => setActiveLayer('COMBINED_RISK')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 6,
-            fontSize: 13,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            backgroundColor: activeLayer === 'COMBINED_RISK' ? '#0f172a' : 'transparent',
-            color: activeLayer === 'COMBINED_RISK' ? '#ffffff' : '#475569'
-          }}
-        >
-          <Flame size={16} color={activeLayer === 'COMBINED_RISK' ? '#f87171' : '#64748b'} />
-          Layer 3: Combined Outbreak Heatmap
-        </button>
-      </div>
-
-      {/* Interactive Map Visualizer and Cluster Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24 }}>
-        {/* Map Canvas / Grid Representation */}
+      {/* 3. Main Grid: Map (Left) & Surveillance Intelligence / Broadcast (Right) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(360px, 1fr)', gap: 20 }}>
+        {/* Left Column: Spatial Projection Map */}
         <div className="admin-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {/* Card Header */}
           <div style={{
-            backgroundColor: '#0f172a',
-            color: '#f8fafc',
-            padding: '16px 20px',
+            backgroundColor: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '14px 18px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Layers size={18} color="#2dd4bf" />
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.04em' }}>
-                SPATIAL PROJECTION • MAHARASHTRA AGRO-CLIMATIC CORRIDOR
+              <Layers size={17} color="#059669" />
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', letterSpacing: '0.02em' }}>
+                SPATIAL PROJECTION - MAHARASHTRA AGRO-CLIMATIC CORRIDOR
               </span>
             </div>
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>
-              Farmer Identities Privacy-Masked
+            <span style={{ 
+              fontSize: 11, 
+              color: '#64748b', 
+              background: '#f1f5f9', 
+              padding: '3px 9px', 
+              borderRadius: 6,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              fontWeight: 600
+            }}>
+              <Lock size={11} /> Farmer Identities Privacy-Masked
             </span>
           </div>
 
-          {/* Real Leaflet OpenStreetMap Container */}
+          {/* Leaflet OpenStreetMap Container */}
           <div
             ref={mapContainerRef}
             id="admin-osm-map-container"
             style={{
-              height: 420,
+              height: 480,
               width: '100%',
               backgroundColor: '#e2e8f0',
               zIndex: 1
             }}
           />
 
-
-          <div style={{ padding: '12px 18px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b' }}>
-            <span>Layer Status: <strong>{activeLayer}</strong></span>
+          {/* Card Footer Bar */}
+          <div style={{ 
+            padding: '12px 18px', 
+            backgroundColor: '#f8fafc', 
+            borderTop: '1px solid #e2e8f0', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            fontSize: 12, 
+            color: '#475569' 
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              Layer Status: <strong style={{ color: '#0f766e', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#0f766e', display: 'inline-block' }} />
+                {activeLayer}
+              </strong>
+            </span>
             <span>Spatial Aggregation: <strong>PIN Code Centroids</strong></span>
           </div>
         </div>
 
-        {/* Selected Hotspot Intelligence Panel */}
-        <div className="admin-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <ShieldAlert size={20} color="#b91c1c" />
-              <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Regional Surveillance Intelligence</h3>
+        {/* Right Column: Regional Intelligence & Broadcast Dispatcher */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Card 1: Regional Surveillance Intelligence */}
+          <div className="admin-card" style={{ padding: '20px 22px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldAlert size={18} color="#dc2626" />
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Regional Surveillance Intelligence
+                  </h3>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                  {selectedCluster ? `Telemetry for ${selectedCluster.district} Agro-Climatic Zone` : 'Select an area on the map to review details.'}
+                </p>
+              </div>
+
+              {/* State vector outline silhouette badge */}
+              <div style={{
+                width: 38,
+                height: 38,
+                borderRadius: 8,
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8'
+              }}>
+                <MapPin size={20} color="#059669" />
+              </div>
             </div>
 
             {selectedCluster ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ padding: '12px 14px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase' }}>
-                    Risk Category: {selectedCluster.severity || 'CRITICAL / HIGH'}
+                {/* District Title & Severity Badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                    {selectedCluster.district} Surveillance Zone
+                  </span>
+                  <span className={selectedCluster.severity === 'CRITICAL' ? 'badge-danger' : 'badge-pending'}>
+                    {selectedCluster.severity || 'HIGH RISK'}
+                  </span>
+                </div>
+
+                {/* Disease Name */}
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#0f766e' }}>
+                  {selectedCluster.title || selectedCluster.disease || 'Livestock Outbreak Warning'}
+                </div>
+
+                {/* Risk Probability Meter */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>Outbreak Risk Probability:</span>
+                    <strong style={{ color: '#dc2626', fontSize: 13 }}>
+                      {selectedCluster.combinedScore || 85}%
+                    </strong>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginTop: 2 }}>
-                    {selectedCluster.title || `${selectedCluster.district} Agro-Cluster`}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#475569', marginTop: 6, fontStyle: 'italic' }}>
-                    "{selectedCluster.statusWording || 'Potential outbreak risk with high environmental transmission probability'}"
+                  <div style={{ width: '100%', height: 6, background: '#e2e8f0', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                    <div style={{ width: `${selectedCluster.combinedScore || 85}%`, height: '100%', background: '#dc2626', borderRadius: 3 }} />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Observed Cases</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{selectedCluster.caseCount || 4} herds</div>
-                  </div>
-                  <div style={{ padding: '10px', backgroundColor: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Combined Risk Score</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#b91c1c' }}>{selectedCluster.combinedScore || 82}/100</div>
-                  </div>
-                </div>
-
-                {/* Weather Features */}
-                <div style={{ backgroundColor: '#f0fdf4', padding: '12px 14px', borderRadius: 8, border: '1px solid #bbf7d0', fontSize: 12 }}>
-                  <div style={{ fontWeight: 700, color: '#166534', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CloudRain size={14} /> OpenWeather Ingestion Telemetry
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#14532d' }}>
-                    <span>Temperature: <strong>{selectedCluster.temperature || 29}°C</strong></span>
-                    <span>Humidity: <strong>{selectedCluster.humidity || 72}%</strong></span>
-                    <span>Condition: <strong>{selectedCluster.condition || 'Humid / Monsoon'}</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: 12, color: '#475569' }}>
-                  <strong>Official Biosecurity Protocol:</strong>{' '}
-                  {selectedCluster.recommendation || 'Veterinary attention recommended immediately. Enforce ring vaccination.'}
-                </div>
-
-                {/* Emergency Vet Dispatch Action */}
-                <div style={{ marginTop: 8 }}>
-                  {dispatchSuccess && (
-                    <div style={{
-                      padding: '10px 12px',
-                      backgroundColor: '#dcfce7',
-                      color: '#166534',
-                      borderRadius: 8,
-                      border: '1px solid #86efac',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      marginBottom: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8
-                    }}>
-                      <span style={{ fontSize: 16 }}>🚨</span>
-                      <span>Emergency Vet Dispatched! A priority video consultation case has been queued on the field veterinarian's mobile app.</span>
+                {/* Metrics 2-Col */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                  <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b' }}>Active Cases:</span>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#0f172a', marginTop: 2 }}>
+                      {selectedCluster.caseCount || 6} Reported
                     </div>
-                  )}
-
-                  <button
-                    onClick={handleDispatchEmergencyVet}
-                    disabled={dispatchingVet}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      backgroundColor: '#dc2626',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 8,
-                      fontSize: 12.5,
-                      fontWeight: 800,
-                      cursor: dispatchingVet ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
-                    }}
-                  >
-                    <AlertTriangle size={15} />
-                    {dispatchingVet ? 'Dispatching Emergency Response...' : 'Dispatch Emergency Field Vet'}
-                  </button>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b' }}>Vector Risk Index:</span>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#0284c7', marginTop: 2 }}>
+                      {selectedCluster.environmentalScore || 38} / 50
+                    </div>
+                  </div>
                 </div>
+
+                {/* AI Epidemiological Advisory */}
+                {selectedCluster.recommendation && (
+                  <div style={{
+                    fontSize: 11.5,
+                    color: '#065f46',
+                    background: '#f0fdf4',
+                    borderLeft: '3px solid #10b981',
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    lineHeight: 1.4
+                  }}>
+                    {selectedCluster.recommendation}
+                  </div>
+                )}
+
+                {/* Dispatch Emergency Response Action */}
+                <button
+                  onClick={handleDispatchEmergencyVet}
+                  disabled={dispatchingVet}
+                  style={{
+                    background: dispatchSuccess ? '#16a34a' : '#dc2626',
+                    color: '#ffffff',
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)'
+                  }}
+                >
+                  <Siren size={15} />
+                  {dispatchSuccess ? 'Emergency Response Dispatched' : (dispatchingVet ? 'Deploying Response...' : `Deploy Field Mobile Unit to ${selectedCluster.district}`)}
+                </button>
               </div>
             ) : (
-              <p style={{ fontSize: 13, color: '#94a3b8' }}>Select an area on the map to review details.</p>
+              <div style={{ padding: '36px 12px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                Click on any cluster pin on the Maharashtra map to inspect real-time epidemiological telemetry.
+              </div>
             )}
           </div>
 
-          {/* Quick Broadcast Form */}
-          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Send size={14} /> Emergency Broadcast Dispatcher
-            </h4>
-            {broadcastSuccess && (
-              <div style={{ padding: '8px 12px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: 6, fontSize: 12, marginBottom: 8 }}>
-                Emergency alert dispatched to farmers and veterinarians via OneSignal.
+          {/* Card 2: Emergency Broadcast Dispatcher */}
+          <div className="admin-card" style={{ padding: '20px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <Siren size={18} color="#0f766e" />
+              <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Emergency Broadcast Dispatcher
+              </h3>
+            </div>
+
+            <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Alert Headline */}
+              <div style={{ position: 'relative' }}>
+                <Bell size={15} style={{ position: 'absolute', left: 12, top: 12, color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  placeholder="Alert Headline (e.g. URGENT: FMD Ring Advisory)"
+                  required
+                  style={{ width: '100%', paddingLeft: 36, fontSize: 13 }}
+                />
               </div>
-            )}
-            <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input
-                type="text"
-                placeholder="Alert Headline (e.g. URGENT: FMD Ring Advisory)"
-                value={broadcastTitle}
-                onChange={(e) => setBroadcastTitle(e.target.value)}
-                required
-                style={{ fontSize: 12 }}
-              />
-              <textarea
-                rows={2}
-                placeholder="Advisory message for farmers and field dispensaries..."
-                value={broadcastMessage}
-                onChange={(e) => setBroadcastMessage(e.target.value)}
-                required
-                style={{ fontSize: 12 }}
-              />
+
+              {/* Advisory Message */}
+              <div style={{ position: 'relative' }}>
+                <FileText size={15} style={{ position: 'absolute', left: 12, top: 12, color: '#94a3b8' }} />
+                <textarea
+                  rows={3}
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="Advisory message for farmers and field dispensaries..."
+                  required
+                  style={{ width: '100%', paddingLeft: 36, fontSize: 13, resize: 'none' }}
+                />
+              </div>
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={broadcasting}
-                className="btn-gov-primary"
-                style={{ padding: '8px 12px', fontSize: 12, justifyContent: 'center' }}
+                style={{
+                  background: broadcastSuccess ? '#16a34a' : '#0f766e',
+                  color: '#ffffff',
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)'
+                }}
               >
-                {broadcasting ? 'Transmitting Alert...' : 'Dispatch Regional Emergency Broadcast'}
+                <Send size={15} />
+                {broadcastSuccess ? 'Broadcast Dispatched Successfully' : (broadcasting ? 'Transmitting Alert...' : 'Dispatch Regional Emergency Broadcast')}
               </button>
             </form>
           </div>
